@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Launch Package",
             "type": "go",
@@ -12,6 +13,27 @@
             "program": "${workspaceFolder}/main.go",
             "console": "integratedTerminal",
             "args": ["Anna", "Danila", "Nastya"]
+        },
+        {
+            "name": "Attach to Sunbeam",
+            "type": "go",
+            "debugAdapter": "dlv-dap",
+            "request": "attach",
+            "mode": "remote",
+            "remotePath": "${workspaceFolder}/main.go",
+            "port": 2345,
+            "host": "127.0.0.1"
+        },
+        {
+            "name": "Headless DLV",
+            "type": "go",
+            "debugAdapter": "dlv-dap",
+            "request": "attach",
+            "mode": "remote",
+            "remotePath": "${workspaceFolder}/main.go",
+            "port": 2345,
+            "host": "127.0.0.1",
+            "preLaunchTask": "Run headless dlv" // Here !
         }
     ]
 }

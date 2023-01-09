@@ -2,86 +2,44 @@ package main
 
 import (
 	"101/player"
-	"bufio"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"strconv"
-	"strings"
 
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/gookit/color"
 )
 
+//[ ] https://dev.to/pomdtr/how-to-debug-bubble-tea-applications-in-visual-studio-code-50jp
+
+// Figure out how to connect to headless dlv
+
+var players []*player.Player
+
+type model struct {
+	list     []*player.Player
+	cursor   int
+	selected int
+	chosen   bool
+	command  string
+
+	textInput textinput.Model
+}
+
 func main() {
-	players := gameInit()
-	gameLoop(players)
-}
-
-func gameLoop(players []*player.Player) {
-	scanner := bufio.NewScanner(os.Stdin)
-	for {
-		// reads user input until \n by default
-		scanner.Scan()
-		// Holds the string that was scanned
-		text := scanner.Text()
-		if len(text) != 0 {
-
-			str := strings.Split(text, " ")
-			switch str[0] {
-			case "add":
-				if len(str) != 3 {
-					log.Println("wrong command")
-					break
-				}
-				i, err := strconv.Atoi(str[1])
-				if err != nil {
-					log.Println("player id parse error")
-				}
-
-				players[i].SetPoints(str[2])
-				printPlayers(players)
-
-			case "sub":
-				i, err := strconv.Atoi(str[1])
-				if err != nil {
-					log.Println("player id parse error")
-				}
-
-				// Check if -points can be converted to int
-				subPoints, err := strconv.Atoi(str[2])
-				if err != nil {
-					log.Println("subPoints convertion to int failed")
-				}
-
-				players[i].SubPoints(subPoints)
-				printPlayers(players)
-
-			default:
-				log.Println("wrong command")
-			}
-
-		} else {
-			// exit if user entered an empty string
-			break
-		}
-
-	}
-
-	// handle error
-
-	if scanner.Err() != nil {
-		fmt.Println("Error: ", scanner.Err())
+	p := tea.NewProgram(initModel())
+	if _, err := p.Run(); err != nil {
+		fmt.Printf("Alas, there's been an error: %v", err)
+		os.Exit(1)
 	}
 }
 
-func gameInit() []*player.Player {
-	clear()
+func initModel() model {
 	flag.Parse()
 	names := flag.Args()
-
-	var players []*player.Player
 
 	switch len(names) {
 	case 0:
@@ -95,20 +53,145 @@ func gameInit() []*player.Player {
 		}
 	}
 
-	printPlayers(players)
-	return players
-}
-
-func printPlayers(list []*player.Player) {
-	clear()
-	for i, p := range list {
-		color.HEX(p.Color()).Printf("%d. %s\n", i, p.Name())
-		fmt.Println(p.Score())
+	return model{
+		list:   players,
+		cursor: 0,
 	}
 }
 
-func clear() {
-	cmd := exec.Command("clear") //Linux example, its tested
-	cmd.Stdout = os.Stdout
-	cmd.Run()
+func (m *model) initInputField() {
+	ti := textinput.New()
+	ti.Placeholder = "Command for..."
+	ti.Focus()
+	ti.CharLimit = 156
+	ti.Width = 20
+	m.textInput = ti
+}
+
+func (m model) Init() tea.Cmd {
+	return nil
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if !m.chosen {
+		return playersUpdate(msg, m)
+	} else {
+		return scoreUpdate(msg, m)
+	}
+}
+
+func scoreUpdate(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyEnter, tea.KeyCtrlC, tea.KeyEsc:
+
+			m.convertStringToCommand(m.textInput.Value())
+			m.chosen = false
+			m.cursor = 0
+			return m, nil
+		}
+
+		m.textInput, cmd = m.textInput.Update(msg)
+		return m, cmd
+	}
+	return m, nil
+}
+
+func playersUpdate(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+
+	// Is it a key press?
+	case tea.KeyMsg:
+
+		// Cool, what was the actual key pressed?
+		switch msg.String() {
+
+		// These keys should exit the program.
+		case "q":
+			return m, tea.Quit
+
+		case "up":
+			if m.cursor > 0 {
+				m.cursor--
+			}
+
+		case "down":
+			if m.cursor < len(m.list)-1 {
+				m.cursor++
+			}
+
+		case "enter":
+			m.chosen = true
+			m.selected = m.cursor
+			m.initInputField()
+			m.command = "add"
+
+		case "-":
+			m.chosen = true
+			m.selected = m.cursor
+			m.initInputField()
+			m.command = "sub"
+		}
+
+	}
+
+	return m, nil
+}
+
+func (m model) View() string {
+	var result string
+	if !m.chosen {
+		result = playersView(m)
+	} else {
+		result = scoreView(m)
+	}
+	return result
+}
+
+func scoreView(m model) string {
+	return fmt.Sprintf(
+		"Add round calculation command:\n\n%s\n\n%s",
+		m.textInput.View(),
+		"(esc to quit)",
+	) + "\n"
+}
+
+func playersView(m model) string {
+	var output string
+	for i, p := range m.list {
+		cursor := " "
+		if m.cursor == i {
+			cursor = ">"
+		}
+		output += cursor
+		output += color.HEX(p.Color()).Sprintf("%d. %s\n", i, p.Name())
+		output += fmt.Sprintln(p.Score())
+	}
+
+	return output
+
+}
+
+func (m *model) convertStringToCommand(text string) {
+	switch m.command {
+	case "add":
+
+		players[m.selected].SetPoints(text)
+
+	case "sub":
+
+		// Check if -points can be converted to int
+		subPoints, err := strconv.Atoi(text)
+		if err != nil {
+			log.Println("subPoints convertion to int failed")
+		}
+
+		players[m.selected].SubPoints(subPoints)
+
+	default:
+		log.Println("wrong command")
+	}
 }
