@@ -1,25 +1,30 @@
 package main
 
 import (
-	"101/player"
+	"101/internal/player"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/gookit/color"
+
+	css "101/internal/styles"
 )
 
 //[ ] https://dev.to/pomdtr/how-to-debug-bubble-tea-applications-in-visual-studio-code-50jp
 
 // Figure out how to connect to headless dlv
 
-var players []*player.Player
+var (
+	players []*player.Player
+)
 
 type model struct {
+	s        css.Styles
 	list     []*player.Player
 	cursor   int
 	selected int
@@ -27,10 +32,11 @@ type model struct {
 	command  string
 
 	textInput textinput.Model
+	listHelp  string
 }
 
 func main() {
-	p := tea.NewProgram(initModel())
+	p := tea.NewProgram(initModel(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
 		os.Exit(1)
@@ -53,18 +59,46 @@ func initModel() model {
 		}
 	}
 
+	csss := *css.New()
+
 	return model{
-		list:   players,
-		cursor: 0,
+		list:     players,
+		cursor:   0,
+		s:        csss,
+		listHelp: initListHelp(&csss),
 	}
+}
+
+func initListHelp(s *css.Styles) string {
+	help := map[string]string{
+		"enter": "add new points",
+		"bckp":  "substract int",
+		"0":     "nullify player",
+		"esc":   "quit",
+	}
+
+	var helpWriter strings.Builder
+	for i, j := range help {
+		helpWriter.WriteString(fmt.Sprintf(
+			"%s %s\n",
+			s.HelpKeyStyle.Render("• "+i),
+			s.HelpDescStyle.Render(j)))
+	}
+	return helpWriter.String()
 }
 
 func (m *model) initInputField() {
 	ti := textinput.New()
-	ti.Placeholder = "Command for..."
+	switch m.command {
+	case "add":
+		ti.Placeholder = "jqk67890t"
+	case "sub":
+		ti.Placeholder = "qQ / qqQQ"
+	}
 	ti.Focus()
 	ti.CharLimit = 156
-	ti.Width = 20
+	ti.Width = 50
+
 	m.textInput = ti
 }
 
@@ -110,30 +144,37 @@ func playersUpdate(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 
 		// These keys should exit the program.
-		case "q":
+		case "esc":
 			return m, tea.Quit
 
 		case "up":
 			if m.cursor > 0 {
 				m.cursor--
+			} else {
+				m.cursor = len(m.list) - 1
 			}
 
 		case "down":
 			if m.cursor < len(m.list)-1 {
 				m.cursor++
+			} else {
+				m.cursor = 0
 			}
 
 		case "enter":
 			m.chosen = true
 			m.selected = m.cursor
-			m.initInputField()
 			m.command = "add"
+			m.initInputField()
 
-		case "-":
+		case "backspace":
 			m.chosen = true
 			m.selected = m.cursor
-			m.initInputField()
 			m.command = "sub"
+			m.initInputField()
+		case "0":
+			m.selected = m.cursor
+			m.list[m.selected].Win()
 		}
 
 	}
@@ -142,37 +183,64 @@ func playersUpdate(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	var result string
+	var rndr string
 	if !m.chosen {
-		result = playersView(m)
+		rndr = playersView(m)
 	} else {
-		result = scoreView(m)
+		rndr = scoreView(m)
 	}
-	return result
+	return rndr
 }
 
 func scoreView(m model) string {
-	return fmt.Sprintf(
-		"Add round calculation command:\n\n%s\n\n%s",
+	var prompt string
+	switch m.command {
+	case "add":
+		prompt = "Card combination"
+	case "sub":
+		prompt = "Q or QQ"
+	}
+
+	prompt = m.s.TitleSelected.Render(prompt)
+	help := m.s.HelpDescStyle.Render("esc -> quit")
+
+	return m.s.AppStyle.Render(fmt.Sprintf(
+		"%s\n\n%s\n\n%s",
+		prompt,
 		m.textInput.View(),
-		"(esc to quit)",
-	) + "\n"
+		help,
+	) + "\n")
 }
 
 func playersView(m model) string {
-	var output string
+	var sb strings.Builder
+
 	for i, p := range m.list {
-		cursor := " "
-		if m.cursor == i {
-			cursor = ">"
+		switch m.cursor {
+		case i: // selected
+			title := m.s.TitleSelected.Render(p.Title())
+			desc := m.s.DescSelected.Render(p.Description())
+			content := fmt.Sprintf(
+				"%s\n%s",
+				title,
+				desc)
+
+			sb.WriteString(m.s.BlockSelected.Render(content))
+		default:
+			title := m.s.TitleDefault.Render(p.Title())
+			desc := m.s.DescDefault.Render(p.Description())
+			content := fmt.Sprintf(
+				"%s\n%s",
+				title,
+				desc)
+
+			sb.WriteString(m.s.BlockDefault.Render(content))
 		}
-		output += cursor
-		output += color.HEX(p.Color()).Sprintf("%d. %s\n", i, p.Name())
-		output += fmt.Sprintln(p.Score())
 	}
 
-	return output
+	sb.WriteString(m.s.BlockHelp.Render(m.listHelp))
 
+	return m.s.AppStyle.Render(sb.String())
 }
 
 func (m *model) convertStringToCommand(text string) {
