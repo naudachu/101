@@ -2,9 +2,13 @@ package clc
 
 var CN = map[string]int{
 	"j": 2,
+	"J": 2,
 	"q": 3,
+	"Q": 3,
 	"k": 4,
+	"K": 4,
 	"t": 11,
+	"T": 22,
 	"0": 10,
 	"9": 0,
 }

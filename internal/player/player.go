@@ -1,34 +1,28 @@
 package player
 
 import (
-	"101/clc"
+	"101/internal/clc"
 	"fmt"
 	"strings"
 )
 
-var number int = 0
-var colors = []string{
-	"#a83291",
-	"#f5428d",
-	"#5142f5",
-	"#42f59e",
-	"#8df542",
-	"#f5e642",
-}
-
 type Player struct {
-	name   string
-	rounds []int // A number of points calculated at the each round;
-	score  int   // Total points;
-	color  string
+	name    string
+	rounds  []int // A number of points calculated at the each round;
+	score   int   // Total points;
+	color   string
+	strikes int
 }
 
-func (p *Player) Name() string {
-	return p.name
+func (p *Player) Title() string {
+	var xx string
+	for x := 0; x < p.strikes; x++ {
+		xx += "•"
+	}
+	return p.name + " " + xx
 }
 
-func (p *Player) Score() string {
-	// Rounds to string
+func (p *Player) Description() string {
 	var str []string
 	for _, e := range p.rounds {
 		str = append(str, fmt.Sprint(e))
@@ -38,7 +32,7 @@ func (p *Player) Score() string {
 	}
 	scoreString := strings.Join(str, " ")
 
-	return fmt.Sprintf("%d | %s\n", p.score, scoreString)
+	return fmt.Sprintf("%d | %s", p.score, scoreString)
 }
 
 func (p *Player) Color() string {
@@ -51,9 +45,7 @@ func NewPlayer(name string) *Player {
 		name:   name,
 		rounds: []int{},
 		score:  0,
-		color:  colors[number],
 	}
-	number += 1
 	return p
 }
 
@@ -64,12 +56,19 @@ func (p *Player) SetPoints(cards string) *Player {
 	switch cards {
 
 	case "":
-		p.rounds = append(p.rounds, 0)
+		// [ ] hm?
 
 	default:
 		collected := clc.Add(cards)
 		p.rounds = append(p.rounds, collected)
-		p.score = p.score + collected
+
+		if p.score+collected >= 101 {
+			p.strikes += 1
+			p.score = 0
+			p.rounds = []int{}
+		} else {
+			p.score = p.score + collected
+		}
 	}
 
 	return p
@@ -86,5 +85,11 @@ func (p *Player) SubPoints(collected int) *Player {
 	if p.score < 0 {
 		p.score = 0
 	}
+	return p
+}
+
+func (p *Player) Win() *Player {
+	p.rounds = []int{}
+	p.score = 0
 	return p
 }
