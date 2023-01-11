@@ -129,8 +129,8 @@ func scoreUpdate(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 			m.cursor = 0
 			return m, nil
 		}
-		switch msg.String() {
-		case "j", "J", "k", "K", "q", "Q", "t", "T", "6", "7", "8", "9", "0":
+		switch strings.ToLower(msg.String()) {
+		case "j", "k", "q", "t", "6", "7", "8", "9", "0":
 			m.textInput, cmd = m.textInput.Update(msg)
 			return m, cmd
 		}
