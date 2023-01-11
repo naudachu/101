@@ -47,14 +47,16 @@ func initModel() model {
 	flag.Parse()
 	names := flag.Args()
 
-	switch len(names) {
-	case 0:
-		players = append(players, player.NewPlayer("Player 1"))
-		players = append(players, player.NewPlayer("Player 2"))
-	default:
-		for _, e := range names {
-			{
-				players = append(players, player.NewPlayer(e))
+	{ // Create players from CLI args
+		switch len(names) {
+		case 0:
+			players = append(players, player.NewPlayer("Player 1"))
+			players = append(players, player.NewPlayer("Player 2"))
+		default:
+			for _, e := range names {
+				{
+					players = append(players, player.NewPlayer(e))
+				}
 			}
 		}
 	}
@@ -139,47 +141,64 @@ func playersUpdate(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 
 	// Is it a key press?
 	case tea.KeyMsg:
-
 		// Cool, what was the actual key pressed?
 		switch msg.String() {
 
+		case "up":
+			m.CursorUp()
+
+		case "down":
+			m.CursorDown()
+
+		case "enter":
+			m.SelectWithAddCmd()
+		case "backspace":
+			m.SelectWithSubstractCmd()
+		case "0":
+			m.newFunction()
 		// These keys should exit the program.
 		case "esc":
 			return m, tea.Quit
-
-		case "up":
-			if m.cursor > 0 {
-				m.cursor--
-			} else {
-				m.cursor = len(m.list) - 1
-			}
-
-		case "down":
-			if m.cursor < len(m.list)-1 {
-				m.cursor++
-			} else {
-				m.cursor = 0
-			}
-
-		case "enter":
-			m.chosen = true
-			m.selected = m.cursor
-			m.command = "add"
-			m.initInputField()
-
-		case "backspace":
-			m.chosen = true
-			m.selected = m.cursor
-			m.command = "sub"
-			m.initInputField()
-		case "0":
-			m.selected = m.cursor
-			m.list[m.selected].Win()
 		}
 
 	}
 
 	return m, nil
+}
+
+func (m *model) newFunction() {
+	m.selected = m.cursor
+	m.list[m.selected].Win()
+}
+
+func (m *model) CursorUp() {
+	if m.cursor > 0 {
+		m.cursor--
+	} else {
+		m.cursor = len(m.list) - 1
+	}
+}
+
+func (m *model) CursorDown() {
+	if m.cursor < len(m.list)-1 {
+		m.cursor++
+	} else {
+		m.cursor = 0
+	}
+}
+
+func (m *model) SelectWithAddCmd() {
+	m.chosen = true
+	m.selected = m.cursor
+	m.command = "add"
+	m.initInputField()
+}
+
+func (m *model) SelectWithSubstractCmd() {
+	m.chosen = true
+	m.selected = m.cursor
+	m.command = "sub"
+	m.initInputField()
 }
 
 func (m model) View() string {
