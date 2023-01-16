@@ -5,6 +5,3 @@ TUI made with bubbletea library with "hand-made" players list component.
 ### Launch:
 `go build ./main.go`
 `./main`
-
-### TDB:
-[ ] Score mask to make table-like view;
