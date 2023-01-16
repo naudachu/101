@@ -100,7 +100,6 @@ func (m *model) initInputField() {
 	ti.Focus()
 	ti.CharLimit = 156
 	ti.Width = 50
-
 	m.textInput = ti
 }
 
@@ -122,12 +121,20 @@ func scoreUpdate(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
-		case tea.KeyEnter, tea.KeyCtrlC, tea.KeyEsc:
+		case tea.KeyEnter:
 
 			m.convertStringToCommand(m.textInput.Value())
 			m.chosen = false
 			m.cursor = 0
-			return m, nil
+			return m, cmd
+		case tea.KeyEsc:
+			m.chosen = false
+			m.cursor = 0
+			return m, cmd
+		case tea.KeyBackspace, tea.KeyDelete, tea.KeyRight, tea.KeyLeft:
+			m.textInput, cmd = m.textInput.Update(msg)
+			return m, cmd
+
 		}
 		switch strings.ToLower(msg.String()) {
 		case "j", "k", "q", "t", "6", "7", "8", "9", "0":

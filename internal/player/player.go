@@ -25,14 +25,32 @@ func (p *Player) Title() string {
 func (p *Player) Description() string {
 	var str []string
 	for _, e := range p.rounds {
-		str = append(str, fmt.Sprint(e))
+		switch len(fmt.Sprint(e)) {
+		case 0:
+			str = append(str, "-")
+		case 1:
+			str = append(str, "  ", fmt.Sprint(e))
+		case 2:
+			str = append(str, " ", fmt.Sprint(e))
+		default:
+			str = append(str, "", fmt.Sprint(e))
+		}
 	}
-	if str == nil {
-		str = append(str, "-")
-	}
-	scoreString := strings.Join(str, " ")
 
-	return fmt.Sprintf("%d | %s", p.score, scoreString)
+	var scoreString string
+
+	switch len(fmt.Sprint(p.score)) {
+	case 1:
+		scoreString = fmt.Sprint("  ", p.score)
+	case 2:
+		scoreString = fmt.Sprint(" ", p.score)
+	default:
+		scoreString = fmt.Sprint(p.score)
+	}
+
+	roundsString := strings.Join(str, " ")
+
+	return fmt.Sprintf("%s | %s", scoreString, roundsString)
 }
 
 func (p *Player) Color() string {
