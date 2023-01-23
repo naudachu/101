@@ -36,9 +36,10 @@ type model struct {
 }
 
 func main() {
-	f, err := LogToFile("debug.log", "debug")
+	f, err := LogToFile(".log", "debug")
 	if err != nil {
 		fmt.Println("fatal:", err)
+
 		os.Exit(1)
 	}
 	defer f.Close()
@@ -132,11 +133,11 @@ func scoreUpdate(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 
 			m.convertStringToCommand(m.textInput.Value())
 			m.chosen = false
-			m.cursor = 0
+			//m.cursor = 0
 			return m, cmd
 		case tea.KeyEsc:
 			m.chosen = false
-			m.cursor = 0
+			//m.cursor = 0
 			return m, cmd
 		case tea.KeyBackspace, tea.KeyDelete, tea.KeyRight, tea.KeyLeft:
 			m.textInput, cmd = m.textInput.Update(msg)
@@ -171,7 +172,7 @@ func playersUpdate(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 		case "backspace":
 			m.SelectWithSubstractCmd()
 		case "0":
-			m.newFunction()
+			m.NullScore()
 		// These keys should exit the program.
 		case "esc":
 			return m, tea.Quit
@@ -182,7 +183,7 @@ func playersUpdate(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *model) newFunction() {
+func (m *model) NullScore() {
 	m.selected = m.cursor
 	m.list[m.selected].Win()
 }
@@ -230,10 +231,13 @@ func (m model) View() string {
 func scoreView(m model) string {
 	var prompt string
 	switch m.command {
+
 	case "add":
 		prompt = "Card combination"
+
 	case "sub":
 		prompt = "Q or QQ"
+
 	}
 
 	prompt = m.s.TitleSelected.Render(prompt)
