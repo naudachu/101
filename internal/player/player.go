@@ -24,17 +24,21 @@ func (p *Player) Title() string {
 
 func (p *Player) Description() string {
 	var str []string
-	for _, e := range p.rounds {
-		switch len(fmt.Sprint(e)) {
-		case 0:
-			str = append(str, "-")
-		case 1:
-			str = append(str, "  ", fmt.Sprint(e))
-		case 2:
-			str = append(str, " ", fmt.Sprint(e))
-		default:
-			str = append(str, "", fmt.Sprint(e))
+	if len(p.rounds) != 0 {
+		for _, e := range p.rounds {
+			switch len(fmt.Sprint(e)) {
+			case 0:
+				str = append(str, "-")
+			case 1:
+				str = append(str, "  ", fmt.Sprint(e))
+			case 2:
+				str = append(str, " ", fmt.Sprint(e))
+			default:
+				str = append(str, "", fmt.Sprint(e))
+			}
 		}
+	} else {
+		str = append(str, "  -")
 	}
 
 	var scoreString string
