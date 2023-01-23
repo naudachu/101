@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -36,6 +36,13 @@ type model struct {
 }
 
 func main() {
+	f, err := LogToFile("debug.log", "debug")
+	if err != nil {
+		fmt.Println("fatal:", err)
+		os.Exit(1)
+	}
+	defer f.Close()
+
 	p := tea.NewProgram(initModel(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
@@ -100,7 +107,6 @@ func (m *model) initInputField() {
 	ti.Focus()
 	ti.CharLimit = 156
 	ti.Width = 50
-
 	m.textInput = ti
 }
 
@@ -122,12 +128,20 @@ func scoreUpdate(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
-		case tea.KeyEnter, tea.KeyCtrlC, tea.KeyEsc:
+		case tea.KeyEnter:
 
 			m.convertStringToCommand(m.textInput.Value())
 			m.chosen = false
 			m.cursor = 0
-			return m, nil
+			return m, cmd
+		case tea.KeyEsc:
+			m.chosen = false
+			m.cursor = 0
+			return m, cmd
+		case tea.KeyBackspace, tea.KeyDelete, tea.KeyRight, tea.KeyLeft:
+			m.textInput, cmd = m.textInput.Update(msg)
+			return m, cmd
+
 		}
 		switch strings.ToLower(msg.String()) {
 		case "j", "k", "q", "t", "6", "7", "8", "9", "0":
@@ -267,20 +281,37 @@ func playersView(m model) string {
 func (m *model) convertStringToCommand(text string) {
 	switch m.command {
 	case "add":
-
-		players[m.selected].SetPoints(text)
+		p := players[m.selected]
+		p.SetPoints(text)
+		log.Printf("%s %s %s", p.Title(), m.command, text)
 
 	case "sub":
+		p := players[m.selected]
 
-		// Check if -points can be converted to int
-		subPoints, err := strconv.Atoi(text)
-		if err != nil {
-			log.Println("subPoints convertion to int failed")
-		}
-
-		players[m.selected].SubPoints(subPoints)
+		p.SubPoints(text)
+		log.Printf("%s %s %s", p.Title(), m.command, text)
 
 	default:
 		log.Println("wrong command")
 	}
+}
+
+func LogToFile(path string, prefix string) (*os.File, error) {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
+	if err != nil {
+		return nil, err
+	}
+	log.SetOutput(f)
+
+	// Add a space after the prefix if a prefix is being specified and it
+	// doesn't already have a trailing space.
+	if len(prefix) > 0 {
+		finalChar := prefix[len(prefix)-1]
+		if !unicode.IsSpace(rune(finalChar)) {
+			prefix += " "
+		}
+	}
+	log.SetPrefix(prefix)
+
+	return f, nil
 }
