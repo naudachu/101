@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"unicode"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -287,13 +286,13 @@ func (m *model) convertStringToCommand(text string) {
 	case "add":
 		p := players[m.selected]
 		p.SetPoints(text)
-		log.Printf("%s %s %s", p.Title(), m.command, text)
+		log.Printf("%s %s %s %s", p.Title(), m.command, text, p.Description())
 
 	case "sub":
 		p := players[m.selected]
 
 		p.SubPoints(text)
-		log.Printf("%s %s %s", p.Title(), m.command, text)
+		log.Printf("%s %s %s %s", p.Title(), m.command, text, p.Description())
 
 	default:
 		log.Println("wrong command")
@@ -306,16 +305,6 @@ func LogToFile(path string, prefix string) (*os.File, error) {
 		return nil, err
 	}
 	log.SetOutput(f)
-
-	// Add a space after the prefix if a prefix is being specified and it
-	// doesn't already have a trailing space.
-	if len(prefix) > 0 {
-		finalChar := prefix[len(prefix)-1]
-		if !unicode.IsSpace(rune(finalChar)) {
-			prefix += " "
-		}
-	}
-	log.SetPrefix(prefix)
 
 	return f, nil
 }
