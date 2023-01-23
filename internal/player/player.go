@@ -92,16 +92,23 @@ func (p *Player) SetPoints(cards string) *Player {
 	return p
 }
 
-func (p *Player) SubPoints(collected int) *Player {
-	if collected < 0 {
-		p.rounds = append(p.rounds, collected)
-		p.score = p.score + collected
-	} else {
-		p.rounds = append(p.rounds, -collected)
-		p.score = p.score - collected
-	}
-	if p.score < 0 {
-		p.score = 0
+func (p *Player) SubPoints(collected string) *Player {
+	switch collected {
+	case "q":
+		p.rounds = append(p.rounds, -20)
+		if p.score-20 < 0 {
+			p.score = 0
+		} else {
+			p.score = p.score - 20
+		}
+
+	case "qq":
+		p.rounds = append(p.rounds, -40)
+		if p.score-40 < 0 {
+			p.score = 0
+		} else {
+			p.score = p.score - 40
+		}
 	}
 	return p
 }
